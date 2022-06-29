@@ -1,0 +1,13 @@
+{
+	"manifest_version": 1,
+	"id": "com.lusuee.im-select",
+	"app_min_version": "2.8",
+	"version": "1.0.0",
+	"name": "lusuee.im-select",
+	"description": "lusuee.im-select",
+	"author": "lusuee",
+	"homepage_url": "",
+	"repository_url": "",
+	"keywords": [],
+	"categories": []
+}
