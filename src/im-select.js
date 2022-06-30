@@ -14,6 +14,8 @@ function plugin(CodeMirror) {
   //     console.log(stderr);
   //   });
 
+  let insertMode = false;
+
   let im;
   let imDefault = "com.apple.keylayout.ABC";
   let i = util.promisify(imChange);
@@ -25,37 +27,35 @@ function plugin(CodeMirror) {
   };
 
   function imChange(key) {
-    if (key === "<Esc>") {
+    if (insertMode && key === "<Esc>") {
       child_process.exec(
-        path,
+        `${path} && ${path} ${imDefault}`,
         { shell: "/bin/zsh", timeout: 500, windowsHide: true },
         (err, stdout, stderr) => {
           im = stdout;
         }
       );
-      child_process.exec(path + " " + imDefault, {
-        shell: "/bin/zsh",
-        timeout: 500,
-        windowsHide: true,
-      });
+      insertMode = false;
     } else if (
-      key === "i" ||
-      key === "I" ||
-      key === "a" ||
-      key === "A" ||
-      key === "o" ||
-      key === "O" ||
-      key === "s" ||
-      key === "S"
+      !insertMode &&
+      (key === "i" ||
+        key === "I" ||
+        key === "a" ||
+        key === "A" ||
+        key === "o" ||
+        key === "O" ||
+        key === "s" ||
+        key === "S")
     ) {
       if (!im) {
         im = imDefault;
       }
-      child_process.exec(path + " " + im, {
+      child_process.exec(`${path} ${im}`, {
         shell: "/bin/zsh",
         timeout: 500,
         windowsHide: true,
       });
+      insertMode = true;
     }
   }
 
