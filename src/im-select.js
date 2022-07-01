@@ -1,65 +1,75 @@
 const child_process = require("child_process");
-const util = require("util");
 // const path = "/opt/homebrew/bin/im-select";
+const path = "/usr/local/bin/im-select";
 let isRun = false;
-let path = "/usr/local/bin/im-select";
+let insertMode = false;
+let im;
+let imDefault = "com.apple.keylayout.ABC";
 
 function plugin(CodeMirror) {
   if (isRun) return;
 
-  // 不能通过该命令获取到 im-select 路径，执行该命令报错
-  //   child_process.execSync("which im-select", (err, stdout, stderr) => {
-  //     console.log(err);
-  //     console.log(stdout);
-  //     console.log(stderr);
-  //   });
-
-  let insertMode = false;
-
-  let im;
-  let imDefault = "com.apple.keylayout.ABC";
-  let i = util.promisify(imChange);
   let old = CodeMirror.Vim.findKey;
   CodeMirror.Vim.findKey = function (cm, key, origin) {
-    let p = old(cm, key, origin);
-    i(key);
-    return p;
+    switchInputMethod(key);
+    return old(cm, key, origin);
   };
 
-  function imChange(key) {
-    if (insertMode && key === "<Esc>") {
-      child_process.exec(
-        `${path} && ${path} ${imDefault}`,
-        { shell: "/bin/zsh", timeout: 500, windowsHide: true },
-        (err, stdout, stderr) => {
-          im = stdout;
-        }
-      );
-      insertMode = false;
-    } else if (
-      !insertMode &&
-      (key === "i" ||
-        key === "I" ||
-        key === "a" ||
-        key === "A" ||
-        key === "o" ||
-        key === "O" ||
-        key === "s" ||
-        key === "S")
-    ) {
-      if (!im) {
-        im = imDefault;
-      }
-      child_process.exec(`${path} ${im}`, {
-        shell: "/bin/zsh",
-        timeout: 500,
-        windowsHide: true,
-      });
-      insertMode = true;
-    }
-  }
-
   isRun = true;
+}
+
+async function switchInputMethod(key) {
+  if (insertMode && key === "<Esc>") {
+    im = await getIm();
+    if (im.trim() !== imDefault) {
+      switchIm(imDefault);
+    }
+    insertMode = false;
+  } else if (
+    !insertMode &&
+    (key === "i" ||
+      key === "I" ||
+      key === "a" ||
+      key === "A" ||
+      key === "o" ||
+      key === "O" ||
+      key === "s" ||
+      key === "S")
+  ) {
+    resumeIm();
+    insertMode = true;
+  }
+}
+
+async function getIm() {
+  return executeShell(`${path}`);
+}
+
+async function resumeIm() {
+  if (!im) {
+    im = imDefault;
+  }
+  switchIm(im);
+}
+
+async function switchIm(imName) {
+  executeShell(`${path} ${imName}`);
+}
+
+async function executeShell(cmd) {
+  return new Promise((resolve, reject) => {
+    try {
+      child_process.exec(cmd, (err, stdout, stderr) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(stdout);
+        }
+      });
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 
 module.exports = {
